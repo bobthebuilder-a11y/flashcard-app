@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { Deck, Flashcard } from './types';
 import { loadDecks, saveDecks } from './lib/storage';
+import { exportDeck, importDeck } from './lib/share';
 import AddCardsModal from './components/AddCardsModal';
 import QuizMode from './components/QuizMode';
 import CardEditor from './components/CardEditor';
@@ -58,6 +59,14 @@ export default function App() {
     ));
   };
 
+  const handleImport = async () => {
+    const deck = await importDeck();
+    if (deck) {
+      setDecks(prev => [deck, ...prev]);
+      openDeck(deck.id);
+    }
+  };
+
   // ── Quiz view ────────────────────────────────────────────────────────────
   if (view === 'quiz' && activeDeck) {
     return (
@@ -89,12 +98,21 @@ export default function App() {
           </div>
           <div className="flex gap-2">
             {activeDeck.cards.length > 0 && (
-              <button
-                onClick={() => setView('quiz')}
-                className="px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 text-sm font-medium"
-              >
-                Quiz Me
-              </button>
+              <>
+                <button
+                  onClick={() => exportDeck(activeDeck)}
+                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 text-sm font-medium"
+                  title="Export deck as JSON file"
+                >
+                  Export
+                </button>
+                <button
+                  onClick={() => setView('quiz')}
+                  className="px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 text-sm font-medium"
+                >
+                  Quiz Me
+                </button>
+              </>
             )}
             <button
               onClick={() => setShowAddModal(true)}
@@ -186,12 +204,21 @@ export default function App() {
           </button>
         </div>
       ) : (
-        <button
-          onClick={() => setShowNewDeckInput(true)}
-          className="w-full py-3 mb-6 border-2 border-dashed border-blue-300 rounded-xl text-blue-600 font-medium hover:border-blue-500 hover:bg-blue-50 transition-colors"
-        >
-          + New Deck
-        </button>
+        <div className="flex gap-2 mb-6">
+          <button
+            onClick={() => setShowNewDeckInput(true)}
+            className="flex-1 py-3 border-2 border-dashed border-blue-300 rounded-xl text-blue-600 font-medium hover:border-blue-500 hover:bg-blue-50 transition-colors"
+          >
+            + New Deck
+          </button>
+          <button
+            onClick={handleImport}
+            className="px-4 py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 font-medium hover:border-gray-400 hover:bg-gray-50 transition-colors text-sm"
+            title="Import a deck from a .json file"
+          >
+            Import
+          </button>
+        </div>
       )}
 
       {decks.length === 0 ? (
