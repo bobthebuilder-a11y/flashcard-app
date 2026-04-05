@@ -1,10 +1,10 @@
-import Anthropic from '@anthropic-ai/sdk';
+import Groq from 'groq-sdk';
 import type { Flashcard } from '../types';
 
-function getClient(): Anthropic {
-  const key = localStorage.getItem('anthropic_api_key');
-  if (!key) throw new Error('No API key set. Please add your Anthropic API key in Settings.');
-  return new Anthropic({ apiKey: key, dangerouslyAllowBrowser: true });
+function getClient(): Groq {
+  const key = import.meta.env.VITE_GROQ_API_KEY;
+  if (!key) throw new Error('Groq API key not configured.');
+  return new Groq({ apiKey: key, dangerouslyAllowBrowser: true });
 }
 
 export async function generateFlashcardsFromImage(
@@ -14,16 +14,17 @@ export async function generateFlashcardsFromImage(
 ): Promise<Flashcard[]> {
   const client = getClient();
 
-  const stream = client.messages.stream({
-    model: 'claude-opus-4-6',
+  const stream = await client.chat.completions.create({
+    model: 'meta-llama/llama-4-scout-17b-16e-instruct',
     max_tokens: 2048,
+    stream: true,
     messages: [
       {
         role: 'user',
         content: [
           {
-            type: 'image',
-            source: { type: 'base64', media_type: mediaType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp', data: base64Image },
+            type: 'image_url',
+            image_url: { url: `data:${mediaType};base64,${base64Image}` },
           },
           {
             type: 'text',
@@ -47,18 +48,16 @@ Respond with ONLY a valid JSON array, no other text. Example format:
   });
 
   let fullText = '';
-  for await (const event of stream) {
-    if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
-      fullText += event.delta.text;
-      onChunk?.(event.delta.text);
-    }
+  for await (const chunk of stream) {
+    const delta = chunk.choices[0]?.delta?.content || '';
+    fullText += delta;
+    if (delta) onChunk?.(delta);
   }
 
-  // Parse the JSON response
   const cleaned = fullText.trim().replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
   const parsed = JSON.parse(cleaned);
 
-  if (!Array.isArray(parsed)) throw new Error('Expected array from Claude');
+  if (!Array.isArray(parsed)) throw new Error('Expected array from AI');
 
   return parsed.map((item: { front: string; back: string }, i: number) => ({
     id: `${Date.now()}-${i}`,

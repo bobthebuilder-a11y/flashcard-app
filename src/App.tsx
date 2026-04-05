@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { Deck, Flashcard } from './types';
 import { loadDecks, saveDecks } from './lib/storage';
-import ApiKeySetup from './components/ApiKeySetup';
 import AddCardsModal from './components/AddCardsModal';
 import QuizMode from './components/QuizMode';
 import CardEditor from './components/CardEditor';
@@ -10,7 +9,6 @@ type View = 'home' | 'deck' | 'quiz';
 
 export default function App() {
   const [decks, setDecks] = useState<Deck[]>(() => loadDecks());
-  const [apiKey, setApiKey] = useState<string>(() => localStorage.getItem('anthropic_api_key') || '');
   const [view, setView] = useState<View>('home');
   const [activeDeckId, setActiveDeckId] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -21,15 +19,6 @@ export default function App() {
   useEffect(() => { saveDecks(decks); }, [decks]);
 
   const activeDeck = decks.find(d => d.id === activeDeckId);
-
-  const saveApiKey = (key: string) => {
-    if (key) {
-      localStorage.setItem('anthropic_api_key', key);
-    } else {
-      localStorage.removeItem('anthropic_api_key');
-    }
-    setApiKey(key);
-  };
 
   const createDeck = () => {
     if (!newDeckName.trim()) return;
@@ -173,10 +162,8 @@ export default function App() {
       <div className="text-center mb-8">
         <div className="text-5xl mb-3">🃏</div>
         <h1 className="text-3xl font-bold text-gray-900">FlashCard AI</h1>
-        <p className="text-gray-500 mt-1">Turn photos into flashcards with Claude</p>
+        <p className="text-gray-500 mt-1">Turn photos into flashcards with AI</p>
       </div>
-
-      {!apiKey && <ApiKeySetup onSave={saveApiKey} />}
 
       {showNewDeckInput ? (
         <div className="flex gap-2 mb-6">
@@ -245,15 +232,6 @@ export default function App() {
             </div>
           ))}
         </div>
-      )}
-
-      {apiKey && (
-        <button
-          onClick={() => saveApiKey('')}
-          className="mt-8 text-xs text-gray-400 hover:text-gray-600 block mx-auto"
-        >
-          Change API Key
-        </button>
       )}
     </div>
   );
